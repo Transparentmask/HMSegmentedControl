@@ -22,6 +22,8 @@
 @property (nonatomic, readwrite) NSArray *segmentWidthsArray;
 @property (nonatomic, strong) HMScrollView *scrollView;
 
+@property (nonatomic, assign) NSInteger cachedSelectedSegmentIndex;
+
 @end
 
 @implementation HMScrollView
@@ -687,41 +689,87 @@
 
 #pragma mark - Touch
 
+- (void)highlightWithTouchLocation:(CGPoint)touchLocation notify:(BOOL)notify {
+    NSInteger segment = 0;
+    if (self.segmentWidthStyle == HMSegmentedControlSegmentWidthStyleFixed) {
+        segment = (touchLocation.x + self.scrollView.contentOffset.x) / self.segmentWidth;
+    } else if (self.segmentWidthStyle == HMSegmentedControlSegmentWidthStyleDynamic) {
+        // To know which segment the user touched, we need to loop over the widths and substract it from the x position.
+        CGFloat widthLeft = (touchLocation.x + self.scrollView.contentOffset.x);
+        for (NSNumber *width in self.segmentWidthsArray) {
+            widthLeft = widthLeft - [width floatValue];
+            
+            // When we don't have any width left to substract, we have the segment index.
+            if (widthLeft <= 0)
+                break;
+            
+            segment++;
+        }
+    }
+    
+    NSUInteger sectionsCount = 0;
+    
+    if (self.type == HMSegmentedControlTypeImages) {
+        sectionsCount = [self.sectionImages count];
+    } else if (self.type == HMSegmentedControlTypeTextImages || self.type == HMSegmentedControlTypeText) {
+        sectionsCount = [self.sectionTitles count];
+    }
+    
+    if (self.isMomentary || (segment != self.selectedSegmentIndex && segment < sectionsCount)) {
+        // Check if we have to do anything with the touch event
+        if (self.isTouchEnabled)
+            [self setSelectedSegmentIndex:segment animated:self.shouldAnimateUserSelection notify:notify];
+    }
+
+}
+
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [touches anyObject];
+    CGPoint touchLocation = [touch locationInView:self];
+    
+    if (CGRectContainsPoint(self.bounds, touchLocation)) {
+        self.cachedSelectedSegmentIndex = self.selectedSegmentIndex;
+        [self highlightWithTouchLocation:touchLocation notify:NO];
+    }
+}
+
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [touches anyObject];
+    CGPoint touchLocation = [touch locationInView:self];
+    
+    if (CGRectContainsPoint(self.bounds, touchLocation)) {
+        if(self.cachedSelectedSegmentIndex != HMSegmentedControlNoSegment) {
+            self.cachedSelectedSegmentIndex = self.selectedSegmentIndex;
+        }
+        [self highlightWithTouchLocation:touchLocation notify:NO];
+    }
+}
+
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
     UITouch *touch = [touches anyObject];
     CGPoint touchLocation = [touch locationInView:self];
     
     if (CGRectContainsPoint(self.bounds, touchLocation)) {
-        NSInteger segment = 0;
-        if (self.segmentWidthStyle == HMSegmentedControlSegmentWidthStyleFixed) {
-            segment = (touchLocation.x + self.scrollView.contentOffset.x) / self.segmentWidth;
-        } else if (self.segmentWidthStyle == HMSegmentedControlSegmentWidthStyleDynamic) {
-            // To know which segment the user touched, we need to loop over the widths and substract it from the x position.
-            CGFloat widthLeft = (touchLocation.x + self.scrollView.contentOffset.x);
-            for (NSNumber *width in self.segmentWidthsArray) {
-                widthLeft = widthLeft - [width floatValue];
-                
-                // When we don't have any width left to substract, we have the segment index.
-                if (widthLeft <= 0)
-                    break;
-                
-                segment++;
-            }
+        [self highlightWithTouchLocation:touchLocation notify:YES];
+        if(self.isMomentary) {
+            [self setSelectedSegmentIndex:HMSegmentedControlNoSegment animated:self.shouldAnimateUserSelection notify:NO];
         }
-        
-        NSUInteger sectionsCount = 0;
-        
-        if (self.type == HMSegmentedControlTypeImages) {
-            sectionsCount = [self.sectionImages count];
-        } else if (self.type == HMSegmentedControlTypeTextImages || self.type == HMSegmentedControlTypeText) {
-            sectionsCount = [self.sectionTitles count];
-        }
-        
-        if (self.isMomentary || (segment != self.selectedSegmentIndex && segment < sectionsCount)) {
-            // Check if we have to do anything with the touch event
-            if (self.isTouchEnabled)
-                [self setSelectedSegmentIndex:segment animated:self.shouldAnimateUserSelection notify:YES];
-        }
+    } else if(self.cachedSelectedSegmentIndex != HMSegmentedControlNoSegment) {
+        // Check if we have to do anything with the touch event
+        if (self.isTouchEnabled)
+            [self setSelectedSegmentIndex:self.cachedSelectedSegmentIndex animated:self.shouldAnimateUserSelection notify:NO];
+    } else {
+        [self setSelectedSegmentIndex:HMSegmentedControlNoSegment animated:self.shouldAnimateUserSelection notify:NO];
+    }
+}
+
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event {
+    if(self.cachedSelectedSegmentIndex != HMSegmentedControlNoSegment) {
+        // Check if we have to do anything with the touch event
+        if (self.isTouchEnabled)
+            [self setSelectedSegmentIndex:self.cachedSelectedSegmentIndex animated:self.shouldAnimateUserSelection notify:YES];
+    } else {
+        [self setSelectedSegmentIndex:HMSegmentedControlNoSegment animated:self.shouldAnimateUserSelection notify:YES];
     }
 }
 
@@ -801,7 +849,7 @@
                 if ([self.selectionIndicatorArrowLayer superlayer] == nil) {
                     [self.scrollView.layer addSublayer:self.selectionIndicatorArrowLayer];
                     
-                    [self setSelectedSegmentIndex:index animated:NO notify:YES];
+                    [self setSelectedSegmentIndex:index animated:NO notify:notify];
                     return;
                 }
             }else {
@@ -811,7 +859,7 @@
                     if (self.selectionStyle == HMSegmentedControlSelectionStyleBox && [self.selectionIndicatorBoxLayer superlayer] == nil)
                         [self.scrollView.layer insertSublayer:self.selectionIndicatorBoxLayer atIndex:0];
                     
-                    [self setSelectedSegmentIndex:index animated:NO notify:YES];
+                    [self setSelectedSegmentIndex:index animated:NO notify:notify];
                     return;
                 }
             }
