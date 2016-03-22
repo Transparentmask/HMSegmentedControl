@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "MVHMSegmentedControl"
-  s.version      = "1.5.2.x"
+  s.version      = "1.5.2.0"
   s.summary      = "A drop-in replacement for UISegmentedControl mimicking the style of the one in Google Currents and various other Google products."
   s.description  = <<-DESC
                      A drop-in replacement for UISegmentedControl mimicking the style of the one in Google Currents and various other Google products.
@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.homepage     = "https://github.com/HeshamMegid/HMSegmentedControl"
   s.license      = { :type => 'MIT', :file => 'LICENSE.md' }
   s.author       = { "Hesham Abd-Elmegid" => "hesham.abdelmegid@gmail.com" }
-  s.source       = { :git => "https://github.com/Transparentmask/HMSegmentedControl.git", :tag => "v1.5.2.x" }
+  s.source       = { :git => "https://github.com/Transparentmask/HMSegmentedControl.git", :tag => "v1.5.2.0" }
   s.platform     = :ios, '7.0'
   s.requires_arc = true
   s.source_files = 'HMSegmentedControl/*.{h,m}'
