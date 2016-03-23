@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "MVHMSegmentedControl"
-  s.version      = "1.5.2.0"
+  s.version      = "1.5.20"
   s.summary      = "A drop-in replacement for UISegmentedControl mimicking the style of the one in Google Currents and various other Google products."
   s.description  = <<-DESC
                      A drop-in replacement for UISegmentedControl mimicking the style of the one in Google Currents and various other Google products.
